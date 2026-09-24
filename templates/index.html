@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Introducir Código</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; position: relative; }
+        
+        .profesor-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #ffffff;
+            color: #4a5568;
+            border: 1px solid #cbd5e0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .profesor-btn:hover {
+            background-color: #edf2f7;
+            color: #2d3748;
+            border-color: #a0aec0;
+        }
+
+        .card { background: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); width: 100%; max-width: 400px; }
+        h2 { margin-bottom: 24px; color: #1a1a1a; font-size: 1.5rem; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 0.9rem; font-weight: 600; color: #4a5568; margin-bottom: 8px; }
+        input { width: 100%; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 1rem; transition: border-color 0.2s; }
+        input:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15); }
+        input#code { font-family: monospace; letter-spacing: 4px; text-align: center; font-size: 1.2rem; }
+        button { width: 100%; padding: 12px; background-color: #3182ce; color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #2b6cb0; }
+        #status { margin-top: 20px; font-size: 0.95rem; text-align: center; font-weight: 500; min-height: 24px; }
+    </style>
+</head>
+<body>
+
+    <a href="/profesor" class="profesor-btn">Panel Profesor &rarr;</a>
+
+    <div class="card">
+        <h2>Introduce tus datos</h2>
+        <form id="codeForm">
+            <div class="form-group">
+                <label for="name">Nombre</label>
+                <input type="text" id="name" placeholder="Tu nombre" required />
+            </div>
+            <div class="form-group">
+                <label for="code">Código de 6 dígitos</label>
+                <input type="text" id="code" maxlength="6" placeholder="000000" required />
+            </div>
+            <button type="submit">Enviar</button>
+        </form>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('codeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const code = document.getElementById('code').value;
+            const statusEl = document.getElementById('status');
+
+            const formData = new URLSearchParams();
+            formData.append('name', name);
+            formData.append('code', code);
+
+            const res = await fetch('/submit', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await res.text();
+            if (result === 'SUCCESS') {
+                statusEl.style.color = '#38a169';
+                statusEl.innerText = '¡Código aceptado!';
+                document.getElementById('codeForm').reset();
+            } else {
+                statusEl.style.color = '#e53e3e';
+                statusEl.innerText = 'Código inválido o expirado.';
+            }
+        });
+    </script>
+</body>
+</html>

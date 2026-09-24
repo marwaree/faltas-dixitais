@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel del Profesor</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .card { background: #ffffff; padding: 36px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); width: 100%; max-width: 480px; text-align: center; }
+        h1 { font-size: 1.25rem; color: #718096; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        #code { font-family: monospace; font-size: 3.5rem; font-weight: bold; color: #2d3748; letter-spacing: 8px; margin: 12px 0; background: #edf2f7; padding: 12px; border-radius: 8px; }
+        #timer { font-size: 0.95rem; color: #e53e3e; font-weight: 600; min-height: 24px; margin-bottom: 28px; }
+        .divider { height: 1px; background-color: #e2e8f0; margin: 24px 0; }
+        
+        /* Section Header Layout */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-header h3 {
+            font-size: 1.1rem;
+            color: #2d3748;
+            margin-bottom: 0;
+            text-align: left;
+        }
+
+        /* Danger Reset Button */
+        .clear-btn {
+            background-color: #e53e3e;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .clear-btn:hover {
+            background-color: #c53030;
+        }
+
+        .clear-btn:disabled {
+            background-color: #cbd5e0;
+            cursor: not-allowed;
+        }
+        
+        /* Column container styling */
+        #names-container {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 16px 20px;
+            border-radius: 6px;
+            text-align: left;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        
+        ol#names-list {
+            padding-left: 20px;
+            color: #2d3748;
+            font-size: 1rem;
+        }
+
+        ol#names-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid #edf2f7;
+            font-weight: 500;
+        }
+
+        ol#names-list li:last-child {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            color: #a0aec0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Código Activo</h1>
+        <div id="code">------</div>
+        <div id="timer"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-header">
+            <h3>Nombres Enviados</h3>
+            <button id="clear-btn" class="clear-btn" onclick="clearDatabase()">Limpiar Lista</button>
+        </div>
+
+        <div id="names-container">
+            <ol id="names-list">
+                <li class="empty-state">Ninguno todavía</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        async function syncActiveCode() {
+            try {
+                const res = await fetch('/get-active-code', { method: 'POST' });
+                const text = await res.text();
+                
+                const parts = text.split(':');
+                const code = parts[0];
+                const remainingSecs = parseInt(parts[1], 10);
+                const namesRaw = parts[2] || '';
+
+                document.getElementById('code').innerText = code;
+
+                if (remainingSecs <= 0) {
+                    document.getElementById('timer').innerText = 'Generando nuevo código...';
+                } else {
+                    document.getElementById('timer').innerText = `Expira en ${remainingSecs}s`;
+                }
+
+                // Render names in an ordered list
+                const listEl = document.getElementById('names-list');
+                const nameArray = namesRaw.split(',').map(n => n.trim()).filter(n => n.length > 0);
+
+                if (nameArray.length === 0) {
+                    listEl.innerHTML = '<li class="empty-state">Ninguno todavía</li>';
+                } else {
+                    listEl.innerHTML = nameArray
+                        .map(name => `<li>${escapeHtml(name)}</li>`)
+                        .join('');
+                }
+            } catch (err) {
+                console.error("Error syncing with server:", err);
+            }
+        }
+
+        async function clearDatabase() {
+            const confirmed = confirm("¿Estás seguro de que quieres borrar todos los nombres enviados? Esta acción no se puede deshacer.");
+            if (!confirmed) return;
+
+            const btn = document.getElementById('clear-btn');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/clear-entries', { method: 'POST' });
+                if (res.ok) {
+                    await syncActiveCode();
+                } else {
+                    alert("Error al intentar borrar los registros.");
+                }
+            } catch (err) {
+                console.error("Error clearing entries:", err);
+                alert("Error de conexión al intentar borrar los datos.");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        syncActiveCode();
+        setInterval(syncActiveCode, 1000);
+    </script>
+</body>
+</html>
